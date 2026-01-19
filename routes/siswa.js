@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { pool } from "../server.js";
+import { pool } from "../db.js";
 
 const router = Router();
 
@@ -20,7 +20,9 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
-    const result = await pool.query("SELECT * FROM siswa WHERE id_siswa = $1", [id]);
+    const result = await pool.query("SELECT * FROM siswa WHERE id_siswa = $1", [
+      id,
+    ]);
     if (result.rows.length === 0)
       return res.status(404).json({ error: "not found" });
     res.json(result.rows[0]);
@@ -32,21 +34,32 @@ router.get("/:id", async (req, res) => {
 
 // Create siswa
 router.post("/", async (req, res) => {
-  const { nisn, name, birthDate, gender, address, isActive, entryYear, classId } =
-    req.body;
-  if (!name) return res.status(400).json({ error: "name is required" });
+  const {
+    nisn,
+    nama_lengkap,
+    tanggal_lahir,
+    jenis_kelamin,
+    alamat,
+    status_aktif,
+    tahun_masuk,
+    id_kelas,
+  } = req.body;
+
+  if (!nama_lengkap)
+    return res.status(400).json({ error: "Nama lengkap wajib diisi" });
+
   try {
     const result = await pool.query(
       "INSERT INTO siswa (nisn, nama_lengkap, tanggal_lahir, jenis_kelamin, alamat, id_kelas, status_aktif, tahun_masuk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
       [
         nisn,
-        name,
-        birthDate || null,
-        gender || null,
-        address || null,
-        classId || null,
-        isActive || true,
-        entryYear || null,
+        nama_lengkap,
+        tanggal_lahir || null,
+        jenis_kelamin || null,
+        alamat || null,
+        id_kelas || null,
+        status_aktif || true,
+        tahun_masuk || null,
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -59,7 +72,7 @@ router.post("/", async (req, res) => {
 // Update siswa
 router.put("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { name, birthDate, classId } = req.body;
+  const { nama_lengkap, tanggal_lahir, id_kelas } = req.body;
   try {
     const result = await pool.query(
       `UPDATE siswa SET
@@ -68,7 +81,7 @@ router.put("/:id", async (req, res) => {
                  id_kelas = COALESCE($3, id_kelas)
              WHERE id_siswa = $4
              RETURNING *`,
-      [name, birthDate, classId, id]
+      [nama_lengkap, tanggal_lahir, id_kelas, id]
     );
     if (result.rows.length === 0)
       return res.status(404).json({ error: "not found" });
@@ -89,7 +102,7 @@ router.delete("/:id", async (req, res) => {
     );
     if (result.rows.length === 0)
       return res.status(404).json({ error: "not found" });
-    res.json({ deleted: result.rows[0] });
+    res.json({ message: "Siswa berhasil dihapus", deleted: result.rows[0] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });

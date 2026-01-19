@@ -1,31 +1,12 @@
 import express, { json } from "express";
-import { Pool } from "pg";
 import { promises as fs } from "fs";
 import { join } from "path";
+import { pool } from "./db.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-import siswaRoutes from "./routes/siswa.js";
-
-const _required = ["PGHOST", "PGUSER", "PGPASSWORD", "PGDATABASE", "PGPORT"];
-_required.forEach((k) => {
-  if (!process.env[k]) {
-    console.warn(`Warning: environment variable ${k} is not set`);
-  }
-});
-
 const app = express();
 app.use(json());
-
-export const pool = new Pool({
-  host: process.env.PGHOST,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
-  port: process.env.PGPORT,
-  max: 10,
-  idleTimeoutMillis: 30000,
-});
 
 // Initialize DB: create table if not exists
 async function initDb() {
@@ -46,11 +27,27 @@ async function initDb() {
   }
 }
 
+import siswaRoutes from "./routes/siswa.js";
+import kelasRoutes from "./routes/kelas.js";
+import guruRoutes from "./routes/guru.js";
+import jadwalRoutes from "./routes/jadwal.js";
+import mapelRoutes from "./routes/mapel.js";
+import penugasanRoutes from "./routes/penugasan.js";
+import nilaiRoutes from "./routes/nilai.js";
+import userRoutes from "./routes/user.js";
+
 // Routes
 app.get("/", (req, res) => {
   res.json({ status: "ok", service: "database-sekolah" });
 });
 app.use("/siswa", siswaRoutes);
+app.use("/kelas", kelasRoutes);
+app.use("/guru", guruRoutes);
+app.use("/jadwal", jadwalRoutes);
+app.use("/mapel", mapelRoutes);
+app.use("/penugasan", penugasanRoutes);
+app.use("/nilai", nilaiRoutes);
+app.use("/user", userRoutes);
 
 
 // Start server
