@@ -13,6 +13,13 @@ services:
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql # Otomatis jalankan schema saat startup
       - postgres_data:/var/lib/postgresql/data
 
+  # Service untuk Adminer (GUI Database)
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
   # Service untuk Aplikasi Express
   app:
     build: .
@@ -24,8 +31,13 @@ services:
       DB_PASSWORD: 12345678
       DB_NAME: db_sekolah
       DB_PORT: 5432
+      NODE_ENV: development
     depends_on:
       - db
+    volumes:
+      - .:/app                # Sinkronkan source code
+      - /app/node_modules
+    command: npm run dev
 
 volumes:
   postgres_data:
