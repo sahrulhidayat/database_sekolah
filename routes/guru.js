@@ -18,7 +18,16 @@ router.post("/", async (req, res) => {
   try {
     const result = await pool.query(
       "INSERT INTO guru (nip, nama_lengkap, tanggal_lahir, bidang, jenis_kelamin, alamat, email, no_hp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
-      [nip, nama_lengkap, tanggal_lahir, bidang, jenis_kelamin, alamat, email, no_hp]
+      [
+        nip,
+        nama_lengkap,
+        tanggal_lahir,
+        bidang,
+        jenis_kelamin,
+        alamat,
+        email,
+        no_hp,
+      ],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -31,7 +40,7 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM guru ORDER BY nama_lengkap ASC"
+      "SELECT * FROM guru ORDER BY nama_lengkap ASC",
     );
     res.json(result.rows);
   } catch (err) {
@@ -42,7 +51,7 @@ router.get("/", async (req, res) => {
 
 // Mengakses satu guru berdasarkan id
 router.get("/:id", async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
   try {
     const result = await pool.query("SELECT * FROM guru WHERE id_guru = $1", [
       id,
@@ -58,7 +67,7 @@ router.get("/:id", async (req, res) => {
 
 // Mengubah data guru
 router.put("/:id", async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
   const {
     nip,
     nama_lengkap,
@@ -72,7 +81,17 @@ router.put("/:id", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "UPDATE guru SET nip = $1, nama_lengkap = $2, tanggal_lahir = $3, bidang = $4, jenis_kelamin = $5, alamat = $6, email = $7, no_hp = $8 WHERE id_guru = $9 RETURNING *",
+      `UPDATE guru SET 
+                nip = COALESCE($1, nip), 
+                nama_lengkap = COALESCE($2, nama_lengkap), 
+                tanggal_lahir = COALESCE($3, tanggal_lahir), 
+                bidang = COALESCE($4, bidang), 
+                jenis_kelamin = COALESCE($5, jenis_kelamin), 
+                alamat = COALESCE($6, alamat), 
+                email = COALESCE($7, email), 
+                no_hp = COALESCE($8, no_hp) 
+            WHERE id_guru = $9 
+            RETURNING *`,
       [
         nip,
         nama_lengkap,
@@ -83,7 +102,7 @@ router.put("/:id", async (req, res) => {
         email,
         no_hp,
         id,
-      ]
+      ],
     );
     if (result.rows.length === 0)
       return res.status(404).json({ message: "not found" });
@@ -96,11 +115,11 @@ router.put("/:id", async (req, res) => {
 
 // Menghapus guru
 router.delete("/:id", async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
   try {
     const result = await pool.query(
       "DELETE FROM guru WHERE id_guru = $1 RETURNING *",
-      [id]
+      [id],
     );
     if (result.rows.length === 0)
       return res.status(404).json({ message: "not found" });

@@ -4,12 +4,12 @@ import { pool } from "../db.js";
 const router = Router();
 
 // Menambahkan kelas baru
-router.post('/', async (req, res) => {
-  const { nama_kelas, tingkat, id_wali_kelas, tahun_ajaran} = req.body;
+router.post("/", async (req, res) => {
+  const { nama_kelas, tingkat, id_wali_kelas, tahun_ajaran } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO kelas (nama_kelas, tingkat, id_wali_kelas, tahun_ajaran) VALUES ($1, $2, $3, $4) RETURNING *',
-      [nama_kelas, tingkat, id_wali_kelas, tahun_ajaran]
+      "INSERT INTO kelas (nama_kelas, tingkat, id_wali_kelas, tahun_ajaran) VALUES ($1, $2, $3, $4) RETURNING *",
+      [nama_kelas, tingkat, id_wali_kelas, tahun_ajaran],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -19,9 +19,11 @@ router.post('/', async (req, res) => {
 });
 
 // Mengakses semua kelas
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM kelas ORDER BY nama_kelas ASC');
+    const result = await pool.query(
+      "SELECT * FROM kelas ORDER BY nama_kelas ASC",
+    );
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -30,11 +32,14 @@ router.get('/', async (req, res) => {
 });
 
 // Mengakses satu kelas berdasarkan id
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
+router.get("/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
   try {
-    const result = await pool.query('SELECT * FROM kelas WHERE id_kelas = $1', [id]);
-    if (result.rows.length === 0) return res.status(404).json({ message: "not found" });
+    const result = await pool.query("SELECT * FROM kelas WHERE id_kelas = $1", [
+      id,
+    ]);
+    if (result.rows.length === 0)
+      return res.status(404).json({ message: "not found" });
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -43,15 +48,22 @@ router.get('/:id', async (req, res) => {
 });
 
 // Mengubah data kelas
-router.put('/:id', async (req, res) => {
-  const { id } = req.params;
+router.put("/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
   const { nama_kelas, tingkat, id_wali_kelas, tahun_ajaran } = req.body;
   try {
     const result = await pool.query(
-      'UPDATE kelas SET nama_kelas = $1, tingkat = $2, id_wali_kelas = $3, tahun_ajaran = $4 WHERE id_kelas = $5 RETURNING *',
-      [nama_kelas, tingkat, id_wali_kelas, tahun_ajaran, id]
+      `UPDATE kelas SET 
+                  nama_kelas = COALESCE($1, nama_kelas), 
+                  tingkat = COALESCE($2, tingkat), 
+                  id_wali_kelas = COALESCE($3, id_wali_kelas), 
+                  tahun_ajaran = COALESCE($4, tahun_ajaran) 
+              WHERE id_kelas = $5 
+              RETURNING *`,
+      [nama_kelas, tingkat, id_wali_kelas, tahun_ajaran, id],
     );
-    if (result.rows.length === 0) return res.status(404).json({ message: "not found" });
+    if (result.rows.length === 0)
+      return res.status(404).json({ message: "not found" });
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -60,11 +72,15 @@ router.put('/:id', async (req, res) => {
 });
 
 // Menghapus kelas
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
+router.delete("/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
   try {
-    const result = await pool.query('DELETE FROM kelas WHERE id_kelas = $1 RETURNING *', [id]);
-    if (result.rows.length === 0) return res.status(404).json({ message: "Kelas tidak ditemukan" });
+    const result = await pool.query(
+      "DELETE FROM kelas WHERE id_kelas = $1 RETURNING *",
+      [id],
+    );
+    if (result.rows.length === 0)
+      return res.status(404).json({ message: "Kelas tidak ditemukan" });
     res.json({ message: "Kelas berhasil dihapus" });
   } catch (err) {
     console.error(err);

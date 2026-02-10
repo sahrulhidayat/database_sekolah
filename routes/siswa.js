@@ -7,7 +7,7 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM siswa ORDER BY nama_lengkap ASC"
+      "SELECT * FROM siswa ORDER BY nama_lengkap ASC",
     );
     res.json(result.rows);
   } catch (err) {
@@ -60,7 +60,7 @@ router.post("/", async (req, res) => {
         id_kelas || null,
         status_aktif || true,
         tahun_masuk || null,
-      ]
+      ],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -81,7 +81,7 @@ router.put("/:id", async (req, res) => {
                  id_kelas = COALESCE($3, id_kelas)
              WHERE id_siswa = $4
              RETURNING *`,
-      [nama_lengkap, tanggal_lahir, id_kelas, id]
+      [nama_lengkap, tanggal_lahir, id_kelas, id],
     );
     if (result.rows.length === 0)
       return res.status(404).json({ error: "not found" });
@@ -98,7 +98,7 @@ router.delete("/:id", async (req, res) => {
   try {
     const result = await pool.query(
       "DELETE FROM siswa WHERE id_siswa = $1 RETURNING *",
-      [id]
+      [id],
     );
     if (result.rows.length === 0)
       return res.status(404).json({ error: "not found" });
