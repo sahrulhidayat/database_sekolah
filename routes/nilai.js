@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 
 const router = Router();
 
@@ -15,9 +15,8 @@ router.post("/", async (req, res) => {
     tanggal_input,
   } = req.body;
   try {
-    const result = await pool.query(
-      "INSERT INTO nilai (id_siswa, id_mapel, id_kelas, nilai_angka, semester, tahun_ajaran, tanggal_input) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-      [
+    const [newNilai] = await db("nilai")
+      .insert({
         id_siswa,
         id_mapel,
         id_kelas,
@@ -25,9 +24,9 @@ router.post("/", async (req, res) => {
         semester,
         tahun_ajaran,
         tanggal_input,
-      ],
-    );
-    res.status(201).json(result.rows[0]);
+      })
+      .returning("*");
+    res.status(201).json(newNilai);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -37,10 +36,8 @@ router.post("/", async (req, res) => {
 // Mengakses semua nilai
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM nilai ORDER BY tanggal_input DESC",
-    );
-    res.json(result.rows);
+    const result = await db("nilai").orderBy("tanggal_input", "desc");
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -51,12 +48,10 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query("SELECT * FROM nilai WHERE id_nilai = $1", [
-      id,
-    ]);
-    if (result.rows.length === 0)
+    const result = await db("nilai").where("id_nilai", id);
+    if (result.length === 0)
       return res.status(404).json({ message: "not found" });
-    res.json(result.rows[0]);
+    res.json(result[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -76,9 +71,9 @@ router.put("/:id", async (req, res) => {
     tanggal_input,
   } = req.body;
   try {
-    const result = await pool.query(
-      "UPDATE nilai SET id_siswa = $1, id_mapel = $2, id_kelas = $3, nilai_angka = $4, semester = $5, tahun_ajaran = $6, tanggal_input = $7 WHERE id_nilai = $8 RETURNING *",
-      [
+    const [updatedNilai] = await db("nilai")
+      .where("id_nilai", id)
+      .update({
         id_siswa,
         id_mapel,
         id_kelas,
@@ -86,12 +81,10 @@ router.put("/:id", async (req, res) => {
         semester,
         tahun_ajaran,
         tanggal_input,
-        id,
-      ],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "not found" });
-    res.json(result.rows[0]);
+      })
+      .returning("*");
+    if (!updatedNilai) return res.status(404).json({ message: "not found" });
+    res.json(updatedNilai);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -102,13 +95,12 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query(
-      "DELETE FROM nilai WHERE id_nilai = $1 RETURNING *",
-      [id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "not found" });
-    res.json({ message: "deleted successfully" });
+    const [deletedNilai] = await db("nilai")
+      .where("id_nilai", id)
+      .del()
+      .returning("*");
+    if (!deletedNilai) return res.status(404).json({ message: "not found" });
+    res.json({ message: "deleted successfully", deleted: deletedNilai });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });

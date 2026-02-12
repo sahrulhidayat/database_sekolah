@@ -1,17 +1,17 @@
 import { Router } from "express";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 
 const router = Router();
 
 // Menambahkan kelas baru
 router.post("/", async (req, res) => {
   const { nama_kelas, tingkat, id_wali_kelas, tahun_ajaran } = req.body;
+
   try {
-    const result = await pool.query(
-      "INSERT INTO kelas (nama_kelas, tingkat, id_wali_kelas, tahun_ajaran) VALUES ($1, $2, $3, $4) RETURNING *",
-      [nama_kelas, tingkat, id_wali_kelas, tahun_ajaran],
-    );
-    res.status(201).json(result.rows[0]);
+    const [newKelas] = await db("kelas")
+      .insert({ nama_kelas, tingkat, id_wali_kelas, tahun_ajaran })
+      .returning("*");
+    res.status(201).json(newKelas);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -21,10 +21,8 @@ router.post("/", async (req, res) => {
 // Mengakses semua kelas
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM kelas ORDER BY nama_kelas ASC",
-    );
-    res.json(result.rows);
+    const result = await db("kelas").orderBy("nama_kelas", "asc");
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -35,10 +33,8 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
-    const result = await pool.query("SELECT * FROM kelas WHERE id_kelas = $1", [
-      id,
-    ]);
-    if (result.rows.length === 0)
+    const result = await db("kelas").where("id_kelas", id);
+    if (result.length === 0)
       return res.status(404).json({ message: "not found" });
     res.json(result.rows[0]);
   } catch (err) {
@@ -52,19 +48,12 @@ router.put("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const { nama_kelas, tingkat, id_wali_kelas, tahun_ajaran } = req.body;
   try {
-    const result = await pool.query(
-      `UPDATE kelas SET 
-                  nama_kelas = COALESCE($1, nama_kelas), 
-                  tingkat = COALESCE($2, tingkat), 
-                  id_wali_kelas = COALESCE($3, id_wali_kelas), 
-                  tahun_ajaran = COALESCE($4, tahun_ajaran) 
-              WHERE id_kelas = $5 
-              RETURNING *`,
-      [nama_kelas, tingkat, id_wali_kelas, tahun_ajaran, id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "not found" });
-    res.json(result.rows[0]);
+    const [updatedKelas] = await db("kelas")
+      .where("id_kelas", id)
+      .update({ nama_kelas, tingkat, id_wali_kelas, tahun_ajaran })
+      .returning("*");
+    if (!updatedKelas) return res.status(404).json({ message: "not found" });
+    res.json(updatedKelas);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -75,13 +64,12 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
-    const result = await pool.query(
-      "DELETE FROM kelas WHERE id_kelas = $1 RETURNING *",
-      [id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "Kelas tidak ditemukan" });
-    res.json({ message: "Kelas berhasil dihapus" });
+    const [deletedKelas] = await db("kelas")
+      .where("id_kelas", id)
+      .del()
+      .returning("*");
+    if (!deletedKelas) return res.status(404).json({ message: "not found" });
+    res.json({ message: "deleted successfully", deleted: deletedKelas });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });

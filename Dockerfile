@@ -7,6 +7,7 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+RUN npm run build
 
 # --- STAGE 2: Production Stage ---
 FROM node:25-slim

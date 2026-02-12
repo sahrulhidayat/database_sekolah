@@ -4,9 +4,9 @@ services:
     image: postgres:18-alpine
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345678
-      POSTGRES_DB: db_sekolah
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
@@ -23,19 +23,21 @@ services:
   # Service untuk Aplikasi Express
   app:
     build: .
+    env_file:
+      - .env
     ports:
       - "3000:3000"
     environment:
-      DB_HOST: db
-      DB_USER: postgres
-      DB_PASSWORD: 12345678
-      DB_NAME: db_sekolah
-      DB_PORT: 5432
-      NODE_ENV: development
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT}
+      NODE_ENV: ${NODE_ENV}
     depends_on:
       - db
     volumes:
-      - .:/app                # Sinkronkan source code
+      - .:/app # Sinkronkan source code
       - /app/node_modules
     command: npm run dev
 

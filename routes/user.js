@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 
 const router = Router();
 
@@ -7,11 +7,16 @@ const router = Router();
 router.post("/", async (req, res) => {
   const { username, password_hash, role, id_guru, id_siswa } = req.body;
   try {
-    const result = await pool.query(
-      "INSERT INTO users (username, password_hash, role, id_guru, id_siswa) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [username, password_hash, role, id_guru, id_siswa],
-    );
-    res.status(201).json(result.rows[0]);
+    const [newUser] = await db("users")
+      .insert({
+        username,
+        password_hash,
+        role,
+        id_guru,
+        id_siswa,
+      })
+      .returning("*");
+    res.status(201).json(newUser);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -21,8 +26,8 @@ router.post("/", async (req, res) => {
 // Mengakses semua user
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM users ORDER BY id_user");
-    res.json(result.rows);
+    const result = await db("users").orderBy("id_user");
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -33,10 +38,8 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query("SELECT * FROM users WHERE id_user = $1", [
-      id,
-    ]);
-    if (result.rows.length === 0)
+    const result = await db("users").where("id_user", id);
+    if (result.length === 0)
       return res.status(404).json({ message: "not found" });
     res.json(result.rows[0]);
   } catch (err) {
@@ -50,13 +53,18 @@ router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const { username, password_hash, role, id_guru, id_siswa } = req.body;
   try {
-    const result = await pool.query(
-      "UPDATE users SET username = $1, password_hash = $2, role = $3, id_guru = $4, id_siswa = $5 WHERE id_user = $6 RETURNING *",
-      [username, password_hash, role, id_guru, id_siswa, id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "not found" });
-    res.json(result.rows[0]);
+    const [updatedUser] = await db("users")
+      .where("id_user", id)
+      .update({
+        username,
+        password_hash,
+        role,
+        id_guru,
+        id_siswa,
+      })
+      .returning("*");
+    if (!updatedUser) return res.status(404).json({ message: "not found" });
+    res.json(updatedUser);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -67,13 +75,15 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query(
-      "DELETE FROM users WHERE id_user = $1 RETURNING *",
-      [id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "not found" });
-    res.json(result.rows[0]);
+    const [deletedUser] = await db("users")
+      .where("id_user", id)
+      .del()
+      .returning("*");
+    if (!deletedUser) return res.status(404).json({ message: "not found" });
+    res.json({
+      message: "deleted successfully",
+      deleted: deletedUser,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });

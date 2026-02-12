@@ -1,9 +1,8 @@
+import "dotenv/config";
 import express, { json } from "express";
 import { promises as fs } from "fs";
 import { join } from "path";
-import { pool } from "./db.js";
-import dotenv from "dotenv";
-dotenv.config();
+import { db } from "./db.js";
 
 const app = express();
 app.use(json());
@@ -14,12 +13,12 @@ async function initDb() {
   try {
     const sql = await fs.readFile(schemaPath, "utf8");
     // Execute the SQL from schema.sql (can contain multiple statements)
-    await pool.query(sql);
+    await db.raw(sql);
     console.log(`Database schema loaded from ${schemaPath}`);
   } catch (err) {
     if (err.code === "ENOENT") {
       console.warn(
-        `schema.sql not found at ${schemaPath}, skipping schema initialization.`
+        `schema.sql not found at ${schemaPath}, skipping schema initialization.`,
       );
     } else {
       throw err;
@@ -48,7 +47,6 @@ app.use("/mapel", mapelRoutes);
 app.use("/penugasan", penugasanRoutes);
 app.use("/nilai", nilaiRoutes);
 app.use("/user", userRoutes);
-
 
 // Start server
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;

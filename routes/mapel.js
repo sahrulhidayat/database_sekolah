@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 
 const router = Router();
 
@@ -7,11 +7,10 @@ const router = Router();
 router.post("/", async (req, res) => {
   const { kode_mapel, nama_mapel, kkm } = req.body;
   try {
-    const result = await pool.query(
-      "INSERT INTO mata_pelajaran (kode_mapel, nama_mapel, kkm) VALUES ($1, $2, $3) RETURNING *",
-      [kode_mapel, nama_mapel, kkm],
-    );
-    res.status(201).json(result.rows[0]);
+    const [newMapel] = await db("mata_pelajaran")
+      .insert({ kode_mapel, nama_mapel, kkm })
+      .returning("*");
+    res.status(201).json(newMapel);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -21,10 +20,8 @@ router.post("/", async (req, res) => {
 // Mengakses semua mata pelajaran
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM mata_pelajaran ORDER BY nama_mapel ASC",
-    );
-    res.json(result.rows);
+    const result = await db("mata_pelajaran").orderBy("nama_mapel", "asc");
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -35,11 +32,8 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query(
-      "SELECT * FROM mata_pelajaran WHERE id_mapel = $1",
-      [id],
-    );
-    if (result.rows.length === 0)
+    const result = await db("mata_pelajaran").where("id_mapel", id);
+    if (result.length === 0)
       return res.status(404).json({ message: "not found" });
     res.json(result.rows[0]);
   } catch (err) {
@@ -53,13 +47,12 @@ router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const { nama_mapel, kkm } = req.body;
   try {
-    const result = await pool.query(
-      "UPDATE mata_pelajaran SET nama_mapel = $1, kkm = $2 WHERE id_mapel = $3 RETURNING *",
-      [nama_mapel, kkm, id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "not found" });
-    res.json(result.rows[0]);
+    const [updatedMapel] = await db("mata_pelajaran")
+      .where("id_mapel", id)
+      .update({ nama_mapel, kkm })
+      .returning("*");
+    if (!updatedMapel) return res.status(404).json({ message: "not found" });
+    res.json(updatedMapel);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -70,13 +63,15 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query(
-      "DELETE FROM mata_pelajaran WHERE id_mapel = $1 RETURNING *",
-      [id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "not found" });
-    res.json(result.rows[0]);
+    const [deletedMapel] = await db("mata_pelajaran")
+      .where("id_mapel", id)
+      .del()
+      .returning("*");
+    if (!deletedMapel) return res.status(404).json({ message: "not found" });
+    res.json({
+      message: "deleted successfully",
+      deleted: deletedMapel,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });

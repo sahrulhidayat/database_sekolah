@@ -1,15 +1,13 @@
 import { Router } from "express";
-import { pool } from "../db.js";
+import { db } from "../db.js";
 
 const router = Router();
 
 // Get all siswa
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM siswa ORDER BY nama_lengkap ASC",
-    );
-    res.json(result.rows);
+    const result = await db("siswa").orderBy("nama_lengkap", "asc");
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -20,12 +18,10 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
-    const result = await pool.query("SELECT * FROM siswa WHERE id_siswa = $1", [
-      id,
-    ]);
-    if (result.rows.length === 0)
+    const result = await db("siswa").where("id_siswa", id);
+    if (result.length === 0)
       return res.status(404).json({ error: "not found" });
-    res.json(result.rows[0]);
+    res.json(result[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -49,20 +45,19 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Nama lengkap wajib diisi" });
 
   try {
-    const result = await pool.query(
-      "INSERT INTO siswa (nisn, nama_lengkap, tanggal_lahir, jenis_kelamin, alamat, id_kelas, status_aktif, tahun_masuk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
-      [
+    const [newSiswa] = await db("siswa")
+      .insert({
         nisn,
         nama_lengkap,
-        tanggal_lahir || null,
-        jenis_kelamin || null,
-        alamat || null,
-        id_kelas || null,
-        status_aktif || true,
-        tahun_masuk || null,
-      ],
-    );
-    res.status(201).json(result.rows[0]);
+        tanggal_lahir: tanggal_lahir || null,
+        jenis_kelamin: jenis_kelamin || null,
+        alamat: alamat || null,
+        id_kelas: id_kelas || null,
+        status_aktif: status_aktif !== undefined ? status_aktif : true,
+        tahun_masuk: tahun_masuk || null,
+      })
+      .returning("*");
+    res.status(201).json(newSiswa);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -74,18 +69,12 @@ router.put("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const { nama_lengkap, tanggal_lahir, id_kelas } = req.body;
   try {
-    const result = await pool.query(
-      `UPDATE siswa SET
-                 nama_lengkap = COALESCE($1, nama_lengkap),
-                 tanggal_lahir = COALESCE($2, tanggal_lahir),
-                 id_kelas = COALESCE($3, id_kelas)
-             WHERE id_siswa = $4
-             RETURNING *`,
-      [nama_lengkap, tanggal_lahir, id_kelas, id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: "not found" });
-    res.json(result.rows[0]);
+    const [updatedSiswa] = await db("siswa")
+      .where("id_siswa", id)
+      .update({ nama_lengkap, tanggal_lahir, id_kelas })
+      .returning("*");
+    if (!updatedSiswa) return res.status(404).json({ error: "not found" });
+    res.json(updatedSiswa);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
@@ -96,13 +85,12 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
-    const result = await pool.query(
-      "DELETE FROM siswa WHERE id_siswa = $1 RETURNING *",
-      [id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: "not found" });
-    res.json({ message: "Siswa berhasil dihapus", deleted: result.rows[0] });
+    const [deletedSiswa] = await db("siswa")
+      .where("id_siswa", id)
+      .del()
+      .returning("*");
+    if (!deletedSiswa) return res.status(404).json({ error: "not found" });
+    res.json({ message: "deleted successfully", deleted: deletedSiswa });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "database error" });
